@@ -1,0 +1,86 @@
+<?php 
+
+namespace App\Http\Controllers;
+use App\Models\Pelanggaran;
+use App\Models\Santri;
+use App\Models\Kategori;
+use App\Models\Bukti;
+use Auth;
+
+
+class PengajarPelanggaranController extends Controller
+{
+
+  function index(){
+    $data['user'] = Auth::user();
+
+    $data['list_kategori'] = Kategori::where('id_pondok', Auth::user()->id_pondok)->get();
+    $data['list_santri'] = Santri::where('id_pondok',Auth::user()->id_pondok)->get();
+
+    $data['list_pelanggaran'] = Pelanggaran::select('pelanggaran')
+    ->join('santri','santri.id','=','pelanggaran.id_santri')
+    ->join('bukti','bukti.id_pelanggaran','=','pelanggaran.id')
+    ->join('kategori_pelanggaran','kategori_pelanggaran.id','=','pelanggaran.id_kategori')
+    ->select('bukti.*','pelanggaran.*','pelanggaran.id as idp','santri.*','kategori_pelanggaran.*','kategori_pelanggaran.id as idk')
+    ->where('pelanggaran.id_pondok',Auth::user()->id_pondok)
+    ->get();
+    return view('pengajar.pelanggaran.index', $data);
+
+}
+
+function show(Pelanggaran $pelanggaran){
+    $data['pelanggaran'] = $pelanggaran;
+    $data['user'] = Auth::user();
+     $data['list_pelanggaran'] = Pelanggaran::select('pelanggaran')
+    ->join('santri','santri.id','=','pelanggaran.id_santri')
+    ->join('bukti','bukti.id_pelanggaran','=','pelanggaran.id')
+    ->join('kategori_pelanggaran','kategori_pelanggaran.id','=','pelanggaran.id_kategori')
+    ->select('bukti.*','pelanggaran.*','pelanggaran.id as idp','santri.*','kategori_pelanggaran.*','kategori_pelanggaran.id as idk')
+    ->where('pelanggaran.id_pondok',Auth::user()->id_pondok)
+    ->where('pelanggaran.id',$pelanggaran)
+    ->get();
+
+    return view('pengajar.pelanggaran.show',$data);
+}
+
+
+
+function store(){
+    //pelanggaran
+    $pelanggaran = new Pelanggaran;
+    $pelanggaran->id_pondok = Auth::user()->id_pondok;
+    $pelanggaran->id_kategori = request('id_kategori'); 
+    $pelanggaran->id_santri = request('id_santri');
+    $pelanggaran->tgl = request('tgl');
+    $pelanggaran->deskripsi = request('deskripsi');
+    $pelanggaran->save();
+    
+
+    //bukti
+    $bukti = new Bukti;
+    $bukti->id_pelanggaran = $pelanggaran->id;
+    $bukti->handleUploadFoto();
+    $bukti->save();
+
+    return back()->withInput()->with('success','Data Berhasil Ditambahkan');
+}
+
+function destroy(Pelanggaran $pelanggaran){
+    $pelanggaran->delete();
+    return redirect('pengajar/pelanggaran')->with('pelanggaran', 'Data Berhasil Dihapus');
+}
+
+
+
+function update (Pelanggaran $pelanggaran){
+   $data['list_kategori'] = Kategori::where('id_pondok', Auth::id())->get();
+    $pelanggaran->tgl = request('tgl');
+    $pelanggaran->deskripsi = request('deskripsi');
+    $pelanggaran->id_kategori = request('id_kategori');
+    $pelanggaran->save();
+    return redirect('pengajar/pelanggaran')->with('success','Data Berhasil Diubah');
+
+}
+
+
+}
